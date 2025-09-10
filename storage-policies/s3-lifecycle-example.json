@@ -1,0 +1,251 @@
+/*
+ * AWS S3 Lifecycle Configuration Example
+ * 
+ * This lifecycle policy provides comprehensive cost optimization for S3 storage
+ * by automatically transitioning objects through different storage classes based
+ * on their age and access patterns. This example can be customized for your
+ * specific requirements.
+ * 
+ * Cost Optimization Benefits:
+ * - Up to 70% cost reduction by transitioning to IA after 30 days
+ * - Up to 90% cost reduction by transitioning to Glacier after 90 days  
+ * - Up to 95% cost reduction by transitioning to Deep Archive after 1 year
+ * - Automatic cleanup of incomplete multipart uploads and old versions
+ * 
+ * Customization Guide:
+ * 1. Modify 'Prefix' to target specific folders/objects (e.g., "logs/", "backups/")
+ * 2. Adjust transition days based on your access patterns
+ * 3. Add/remove storage classes based on your requirements
+ * 4. Customize expiration periods for your data retention policies
+ * 5. Configure versioning transitions for cost-effective version management
+ * 
+ * Storage Class Transition Timeline (customizable):
+ * Day 0-29:    Standard storage (immediate access)
+ * Day 30-89:   Standard-IA (infrequent access, 30+ day minimum)
+ * Day 90-364:  Glacier (long-term archive, retrieval in minutes-hours)
+ * Day 365+:    Deep Archive (lowest cost, retrieval in 12+ hours)
+ * 
+ * To apply this policy:
+ * 1. Replace placeholders with your specific values
+ * 2. Test with a small dataset first
+ * 3. Apply using AWS CLI: 
+ *    aws s3api put-bucket-lifecycle-configuration --bucket YOUR_BUCKET --lifecycle-configuration file://s3-lifecycle-example.json
+ * 4. Or use the AWS Console: S3 > Bucket > Management > Lifecycle rules
+ * 
+ * Monitoring:
+ * - Use CloudWatch metrics to monitor transition costs
+ * - Review S3 Storage Class Analysis reports
+ * - Set up cost alerts for unexpected charges
+ */
+
+{
+  "Rules": [
+    {
+      // Basic lifecycle rule for all objects (customizable prefix)
+      "ID": "ComprehensiveCostOptimizationRule",
+      "Status": "Enabled",
+      "Filter": {
+        // Customize prefix to target specific folders or all objects
+        // Examples: "logs/", "backups/", "documents/", or "" for all objects
+        "Prefix": ""
+      },
+      "Transitions": [
+        {
+          // Transition to Standard-IA after 30 days (customizable: 1-30+ days)
+          // Best for: Files accessed less than once per month
+          "Days": 30,
+          "StorageClass": "STANDARD_IA"
+        },
+        {
+          // Transition to Glacier after 90 days (customizable: 1+ days after IA)
+          // Best for: Archive data with occasional access needs
+          "Days": 90,
+          "StorageClass": "GLACIER"
+        },
+        {
+          // Transition to Deep Archive after 1 year (customizable: 90+ days)
+          // Best for: Long-term backups and compliance data
+          "Days": 365,
+          "StorageClass": "DEEP_ARCHIVE"
+        }
+      ],
+      "Expiration": {
+        // Delete objects after 7 years (customizable based on retention policy)
+        // Options: Set to 0 to disable, or adjust based on compliance requirements
+        "Days": 2555
+      },
+      // Versioning cost optimization (if bucket versioning is enabled)
+      "NoncurrentVersionTransitions": [
+        {
+          // Move old versions to IA after 30 days (customizable)
+          "NoncurrentDays": 30,
+          "StorageClass": "STANDARD_IA"
+        },
+        {
+          // Move old versions to Glacier after 90 days (customizable)
+          "NoncurrentDays": 90,
+          "StorageClass": "GLACIER"
+        }
+      ],
+      "NoncurrentVersionExpiration": {
+        // Delete old versions after 1 year (customizable)
+        // Balances version history with storage costs
+        "NoncurrentDays": 365
+      },
+      "AbortIncompleteMultipartUpload": {
+        // Clean up failed uploads after 7 days (customizable: 1-30 days)
+        // Prevents accumulation of incomplete upload charges
+        "DaysAfterInitiation": 7
+      }
+    },
+    {
+      // Example: Specialized rule for log files (faster transitions)
+      "ID": "LogFilesOptimization",
+      "Status": "Enabled",
+      "Filter": {
+        // Target specific log directories
+        "Prefix": "logs/"
+      },
+      "Transitions": [
+        {
+          // Logs transition to IA faster (7 days)
+          "Days": 7,
+          "StorageClass": "STANDARD_IA"
+        },
+        {
+          // Logs to Glacier after 30 days
+          "Days": 30,
+          "StorageClass": "GLACIER"
+        },
+        {
+          // Logs to Deep Archive after 90 days
+          "Days": 90,
+          "StorageClass": "DEEP_ARCHIVE"
+        }
+      ],
+      "Expiration": {
+        // Delete log files after 3 years
+        "Days": 1095
+      },
+      "AbortIncompleteMultipartUpload": {
+        "DaysAfterInitiation": 1
+      }
+    },
+    {
+      // Example: Rule for backup files (longer retention)
+      "ID": "BackupFilesPolicy",
+      "Status": "Enabled",
+      "Filter": {
+        // Target backup directories
+        "Prefix": "backups/"
+      },
+      "Transitions": [
+        {
+          // Backups stay in Standard for 90 days
+          "Days": 90,
+          "StorageClass": "STANDARD_IA"
+        },
+        {
+          // Move to Glacier after 180 days
+          "Days": 180,
+          "StorageClass": "GLACIER"
+        },
+        {
+          // Long-term backup storage in Deep Archive
+          "Days": 365,
+          "StorageClass": "DEEP_ARCHIVE"
+        }
+      ],
+      "Expiration": {
+        // Keep backups for 10 years
+        "Days": 3650
+      },
+      "NoncurrentVersionExpiration": {
+        // Keep backup versions for 2 years
+        "NoncurrentDays": 730
+      },
+      "AbortIncompleteMultipartUpload": {
+        "DaysAfterInitiation": 3
+      }
+    },
+    {
+      // Example: Tag-based rule for specific object types
+      "ID": "ArchiveTaggedObjects",
+      "Status": "Enabled",
+      "Filter": {
+        "Tag": {
+          // Target objects with specific tags
+          "Key": "ArchivePolicy",
+          "Value": "FastArchive"
+        }
+      },
+      "Transitions": [
+        {
+          // Immediate transition to IA (minimum 1 day)
+          "Days": 1,
+          "StorageClass": "STANDARD_IA"
+        },
+        {
+          // Quick transition to Glacier
+          "Days": 7,
+          "StorageClass": "GLACIER"
+        }
+      ],
+      "AbortIncompleteMultipartUpload": {
+        "DaysAfterInitiation": 1
+      }
+    }
+  ]
+}
+
+/*
+ * MODIFICATION GUIDE FOR DIFFERENT STORAGE OUTCOMES:
+ * 
+ * 1. FOR FREQUENTLY ACCESSED DATA (documents, user uploads):
+ *    - Increase initial transition days (60-90 days to IA)
+ *    - Consider skipping Glacier, go directly to Deep Archive
+ *    - Disable expiration or set very long retention
+ * 
+ * 2. FOR LOG FILES AND ANALYTICS DATA:
+ *    - Faster transitions (7 days to IA, 30 days to Glacier)
+ *    - Shorter retention periods (1-3 years)
+ *    - Quick cleanup of incomplete uploads (1 day)
+ * 
+ * 3. FOR BACKUP AND COMPLIANCE DATA:
+ *    - Longer initial period in Standard (90+ days)
+ *    - Extended retention periods (7-10 years)
+ *    - Careful version management for compliance
+ * 
+ * 4. FOR TEMPORARY OR PROCESSED DATA:
+ *    - Short transitions (1-7 days)
+ *    - Short retention (30-365 days)
+ *    - Aggressive cleanup policies
+ * 
+ * 5. FOR MEDIA AND CONTENT:
+ *    - Medium transitions (30-60 days to IA)
+ *    - Consider Intelligent Tiering for unpredictable access
+ *    - Long-term Deep Archive for older content
+ * 
+ * COST CALCULATION EXAMPLE:
+ * Standard Storage:    $0.023/GB/month
+ * Standard-IA:        $0.0125/GB/month (45% savings)
+ * Glacier:             $0.004/GB/month (83% savings)
+ * Deep Archive:        $0.00099/GB/month (96% savings)
+ * 
+ * For 1TB of data over 2 years:
+ * - No lifecycle:      $552
+ * - With lifecycle:    $125 (77% savings)
+ * 
+ * MONITORING AND ALERTING:
+ * - Set up CloudWatch alarms for storage costs
+ * - Use S3 Storage Class Analysis to validate policies
+ * - Monitor retrieval costs for archived data
+ * - Review and adjust policies quarterly
+ * 
+ * TESTING RECOMMENDATIONS:
+ * 1. Start with a test bucket and small dataset
+ * 2. Use shorter transition periods for testing (1, 7, 14 days)
+ * 3. Monitor costs and access patterns for 30 days
+ * 4. Adjust policies based on actual usage
+ * 5. Gradually roll out to production buckets
+ */
