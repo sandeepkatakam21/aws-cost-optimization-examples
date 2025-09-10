@@ -1,0 +1,57 @@
+{
+  "Rules": [
+    {
+      "ID": "CostOptimizationLifecycleRule",
+      "Status": "Enabled",
+      "Filter": {
+        "Prefix": ""
+      },
+      "Transitions": [
+        {
+          "Days": 30,
+          "StorageClass": "STANDARD_IA"
+        },
+        {
+          "Days": 90,
+          "StorageClass": "GLACIER"
+        },
+        {
+          "Days": 365,
+          "StorageClass": "DEEP_ARCHIVE"
+        }
+      ],
+      "Expiration": {
+        "Days": 2555
+      },
+      "NoncurrentVersionTransitions": [
+        {
+          "NoncurrentDays": 30,
+          "StorageClass": "STANDARD_IA"
+        },
+        {
+          "NoncurrentDays": 90,
+          "StorageClass": "GLACIER"
+        }
+      ],
+      "NoncurrentVersionExpiration": {
+        "NoncurrentDays": 365
+      },
+      "AbortIncompleteMultipartUpload": {
+        "DaysAfterInitiation": 7
+      }
+    }
+  ]
+}
+
+// This lifecycle policy provides cost optimization by:
+// 1. Moving objects to Infrequent Access after 30 days
+// 2. Moving to Glacier after 90 days  
+// 3. Moving to Deep Archive after 1 year
+// 4. Expiring objects after 7 years
+// 5. Managing noncurrent versions to reduce storage costs
+// 6. Cleaning up incomplete multipart uploads after 7 days
+//
+// To apply this policy:
+// 1. Save this JSON to a file
+// 2. Use AWS CLI: aws s3api put-bucket-lifecycle-configuration --bucket YOUR_BUCKET --lifecycle-configuration file://s3-lifecycle-example.json
+// 3. Or apply via AWS Console in S3 bucket management
